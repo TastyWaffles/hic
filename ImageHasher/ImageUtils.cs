@@ -6,11 +6,11 @@ using System.Security.Cryptography;
 
 namespace ImageHasher
 {
-  public class ImageUtils
+  public static class ImageUtils
   {
     internal static readonly string[] SupportedExtensions = {".jpg", ".jpeg", ".png", ".bmp", ".exif", ".gif", ".tif"};
 
-    internal static ImageFormat GetImageFormat(string extension)
+    private static ImageFormat GetImageFormat(string extension)
     {
       switch (extension)
       {
@@ -35,7 +35,7 @@ namespace ImageHasher
 
     internal static string GetHashFromFile(FileInfo file, HashAlgorithm algorithm)
     {
-      ImageFormat imageFormat = ImageUtils.GetImageFormat(file.Extension);
+      ImageFormat imageFormat = GetImageFormat(file.Extension);
       if (imageFormat == null)
       {
         return null;
@@ -49,6 +49,11 @@ namespace ImageHasher
           return BitConverter.ToString(algorithm.ComputeHash(ms)).Replace("-", "");
         }
       }
+    }
+
+    internal static bool IsDirectory(string path)
+    {
+      return path != null && ((File.GetAttributes(path) & FileAttributes.Directory) == FileAttributes.Directory);
     }
   }
 }

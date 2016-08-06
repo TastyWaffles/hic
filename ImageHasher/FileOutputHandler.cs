@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 
 namespace ImageHasher
@@ -12,13 +11,13 @@ namespace ImageHasher
     public FileOutputHandler(FileOutputOptions options)
     {
       _options = options;
-      string output = ImageHasher.GetOutputDirectory(options);
+      string output = GetOutputDirectory(options);
       Directory.CreateDirectory(output);
       output = Path.Combine(output, options.FileName);
 
       if (!options.Quiet)
       {
-        Console.WriteLine("Output file path: " + output);
+        Logger.Info("Output file path: " + output);
       }
 
       _fileStream = File.Create(output);
@@ -34,6 +33,19 @@ namespace ImageHasher
     public void HandleFile(FileInfo file, string hash)
     {
       _streamWriter.WriteLine(file.FullName + _options.Separator + hash);
+    }
+
+    private string GetOutputDirectory(BaseOptions options)
+    {
+      if (options.OutputDir != null)
+      {
+        return options.OutputDir;
+      }
+      if (options.Source != null && ImageUtils.IsDirectory(options.Source))
+      {
+        return options.Source;
+      }
+      return Directory.GetCurrentDirectory();
     }
   }
 }

@@ -49,6 +49,7 @@
     <Compile Include="IHashHandler.cs" />
     <Compile Include="ImageHasher.cs" />
     <Compile Include="ImageUtils.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
