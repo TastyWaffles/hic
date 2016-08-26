@@ -7,10 +7,17 @@ namespace ImageHasher
   public class RenameHandler : IHashHandler
   {
     private readonly RenameFilesOptions _options;
+    private readonly string _rootParentDir;
+    private readonly string _outputDir;
 
     public RenameHandler(RenameFilesOptions options)
     {
       _options = options;
+
+      string source = HasherUtils.IsDirectory(_options.Source) ? _options.Source : Directory.GetCurrentDirectory();
+      _rootParentDir = new DirectoryInfo(source).Name;
+
+      _outputDir = HasherUtils.GetOutputDirectory(_options);
     }
 
     public void Dispose()
@@ -27,17 +34,39 @@ namespace ImageHasher
 
       string destination;
 
-      if (ImageUtils.IsDirectory(_options.OutputDir))
+      if (HasherUtils.IsDirectory(_outputDir))
       {
-        if (_options.LeaveInPlace)
+        if (_options.PreserveSubDir)
         {
-          //todo make path relevant to source dir
-          string relevantDirPath = ""; //should be full path of current file from sourceDir down
-          string source = ImageUtils.IsDirectory(_options.Source) ? _options.Source : Directory.GetCurrentDirectory();
+          //make path relevant to source dir
 
+          //split filepath on path separator
+          string[] fileSplit = file.FullName.Split(Path.DirectorySeparatorChar);
 
+          //find source parent dir name in filepath
+          int index = Array.IndexOf(fileSplit, _rootParentDir);
 
-          destination = Path.Combine(_options.OutputDir, relevantDirPath, hash + file.Extension);
+          string finalOutputDirPath;
+          if (index < 0)
+          {
+            finalOutputDirPath = _outputDir;
+          }
+          else
+          {
+            //want to skip the current index,
+            //but leave room at start for the outputDir in order to make building the path easier
+            int len = fileSplit.Length - index;
+            string[] tmp = new string[len];
+            tmp[0] = _outputDir;
+            Array.Copy(fileSplit, index + 1, tmp, 1, len);
+
+            finalOutputDirPath = Path.Combine(tmp);
+
+            //todo handle exceptions from CreateDirectory
+            Directory.CreateDirectory(finalOutputDirPath);
+          }
+
+          destination = Path.Combine(finalOutputDirPath, hash + file.Extension);
         }
         else
         {
@@ -49,6 +78,13 @@ namespace ImageHasher
         destination = Path.Combine(file.Directory.FullName, hash + file.Extension);
       }
 
+      if (_options.Increment)
+      {
+        if (File.Exists(destination))
+        {
+          destination = IncrementFilePath(destination);
+        }
+      }
 
       if (_options.Copy)
       {
@@ -59,33 +95,21 @@ namespace ImageHasher
         file.MoveTo(destination);
       }
     }
+
+    private string IncrementFilePath(string destination)
+    {
+      //todo omg this function has no error handling
+
+      FileInfo fileInfo = new FileInfo(destination);
+
+      string[] splitName = fileInfo.Name.Split('_');
+
+      int val = 0;
+      if (splitName.Length > 1)
+      {
+        val = int.Parse(splitName[1]) + 1;
+      }
+      return Path.Combine(fileInfo.Directory.FullName, splitName[0] + '_' + val);
+    }
   }
 }
-
-/*
-class Program
-{
-    static void Main(string[] args)
-    {
-        CloneDirectory(@"C:\SomeRoot", @"C:\SomeOtherRoot");
-    }
-
-    private static void CloneDirectory(string root, string dest)
-    {
-        foreach (var directory in Directory.GetDirectories(root))
-        {
-            string dirName = Path.GetFileName(directory);
-            if (!Directory.Exists(Path.Combine(dest, dirName)))
-            {
-                Directory.CreateDirectory(Path.Combine(dest, dirName));
-            }
-            CloneDirectory(directory, Path.Combine(dest, dirName));
-        }
-
-        foreach (var file in Directory.GetFiles(root))
-        {
-            File.Copy(file, Path.Combine(dest, Path.GetFileName(file)));
-        }
-    }
-}
-*/

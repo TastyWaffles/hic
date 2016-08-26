@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace ImageHasher
 {
-  public static class ImageUtils
+  public static class HasherUtils
   {
     internal static readonly string[] SupportedExtensions = {".jpg", ".jpeg", ".png", ".bmp", ".exif", ".gif", ".tif"};
 
@@ -54,6 +54,19 @@ namespace ImageHasher
     internal static bool IsDirectory(string path)
     {
       return path != null && ((File.GetAttributes(path) & FileAttributes.Directory) == FileAttributes.Directory);
+    }
+
+    internal static string GetOutputDirectory(BaseOptions options)
+    {
+      if (options.OutputDir != null)
+      {
+        return options.OutputDir;
+      }
+      if (options.Source != null && IsDirectory(options.Source))
+      {
+        return options.Source;
+      }
+      return Directory.GetCurrentDirectory();
     }
   }
 }

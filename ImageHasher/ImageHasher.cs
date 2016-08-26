@@ -27,9 +27,9 @@ namespace ImageHasher
     {
       using (HashAlgorithm algorithm = HashAlgorithm.Create(options.Algorithm))
       {
-        if (ImageUtils.IsDirectory(options.Source))
+        if (HasherUtils.IsDirectory(options.Source))
         {
-          foreach (string extension in ImageUtils.SupportedExtensions)
+          foreach (string extension in HasherUtils.SupportedExtensions)
           {
             if (!options.ExcludedFileExtensions.Contains(extension))
             {
@@ -39,7 +39,7 @@ namespace ImageHasher
 
               foreach (FileInfo file in enumerateFiles)
               {
-                string hash = ImageUtils.GetHashFromFile(file, algorithm);
+                string hash = HasherUtils.GetHashFromFile(file, algorithm);
                 handler.HandleFile(file, options.Lowercase ? hash.ToLower() : hash);
               }
             }
@@ -48,7 +48,7 @@ namespace ImageHasher
         else
         {
           FileInfo file = new FileInfo(options.Source);
-          string hash = ImageUtils.GetHashFromFile(file, algorithm);
+          string hash = HasherUtils.GetHashFromFile(file, algorithm);
           handler.HandleFile(file, options.Lowercase ? hash.ToLower() : hash);
         }
       }

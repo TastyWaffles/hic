@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using CommandLine;
-using CommandLine.Text;
 
 namespace ImageHasher
 {
@@ -16,7 +14,7 @@ namespace ImageHasher
     public string Algorithm
     {
       get { return _algorithm; }
-      set { _algorithm = ("SHA1".Equals(value) || "MD5".Equals(value)) ? value : "SHA1"; }
+      set { _algorithm = "SHA1".Equals(value) || "MD5".Equals(value) ? value : "SHA1"; }
     }
 
     [Option('o', "output", HelpText = "Output directory")] //todo value 1
@@ -57,7 +55,7 @@ namespace ImageHasher
 
     [Option('p', "preserve",
        HelpText = "Preserve-sub directory structure when running recursively with output directory")]
-    public bool LeaveInPlace { get; set; }
+    public bool PreserveSubDir { get; set; }
   }
 
 
