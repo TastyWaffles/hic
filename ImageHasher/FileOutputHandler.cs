@@ -1,4 +1,7 @@
+using System;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 
 namespace ImageHasher
 {
@@ -30,9 +33,50 @@ namespace ImageHasher
       _fileStream.Dispose();
     }
 
-    public void HandleFile(FileInfo file, string hash)
+    public void RunHandler()
     {
-      _streamWriter.WriteLine(file.FullName + _options.Separator + hash);
+      using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
+      {
+        if (HasherUtils.IsDirectory(_options.Source))
+        {
+          DirectoryInfo info = new DirectoryInfo(_options.Source);
+          //Run on the base directory
+          RunOnDirectory(info, algorithm);
+
+          //Run on all subdirectories
+          if (_options.Recursive)
+          {
+            foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories())
+            {
+              RunOnDirectory(directoryInfo, algorithm);
+            }
+          }
+        }
+        else
+        {
+          //Run on single file
+          FileInfo fileInfo = new FileInfo(_options.Source);
+          if (fileInfo.Exists)
+          {
+            RunOnFile(fileInfo, algorithm);
+          }
+        }
+      }
+    }
+
+    private void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
+    {
+      foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles()
+        .Where(s => HasherUtils.SupportedExtensions.Contains(s.Extension, StringComparer.OrdinalIgnoreCase)))
+      {
+        RunOnFile(fileInfo, algorithm);
+      }
+    }
+
+    private void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm)
+    {
+      string hash = HasherUtils.GetHashFromFile(fileInfo, algorithm);
+      _streamWriter.WriteLine(fileInfo.FullName + _options.Separator + (_options.Lowercase ? hash.ToLower() : hash));
     }
   }
 }

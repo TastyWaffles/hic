@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace ImageHasher
 {
@@ -22,62 +23,105 @@ namespace ImageHasher
 
     public void Dispose()
     {
-      //todo
+      //no-op
     }
 
-    public void HandleFile(FileInfo file, string hash)
+    public void RunHandler()
     {
-      if (file.Directory == null)
+      using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
       {
-        return;
-      }
-
-      string destination;
-
-      if (HasherUtils.IsDirectory(_outputDir))
-      {
-        if (_options.PreserveSubDir)
+        if (HasherUtils.IsDirectory(_options.Source))
         {
-          //make path relevant to source dir
+          DirectoryInfo info = new DirectoryInfo(_options.Source);
+          RunOnDirectory(info, algorithm);
 
-          //split filepath on path separator
-          string[] fileSplit = file.FullName.Split(Path.DirectorySeparatorChar);
-
-          //find source parent dir name in filepath
-          int index = Array.IndexOf(fileSplit, _rootParentDir);
-
-          string finalOutputDirPath;
-          if (index < 0)
+          if (_options.Recursive)
           {
-            finalOutputDirPath = _outputDir;
+            foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories())
+            {
+              RunOnDirectory(directoryInfo, algorithm);
+            }
           }
-          else
-          {
-            //want to skip the current index,
-            //but leave room at start for the outputDir in order to make building the path easier
-            int len = fileSplit.Length - index;
-            string[] tmp = new string[len];
-            tmp[0] = _outputDir;
-            Array.Copy(fileSplit, index + 1, tmp, 1, len);
-
-            finalOutputDirPath = Path.Combine(tmp);
-
-            //todo handle exceptions from CreateDirectory
-            Directory.CreateDirectory(finalOutputDirPath);
-          }
-
-          destination = Path.Combine(finalOutputDirPath, hash + file.Extension);
         }
         else
         {
-          destination = Path.Combine(_options.OutputDir, hash + file.Extension);
+          FileInfo fileInfo = new FileInfo(_options.Source);
+          if (fileInfo.Exists)
+          {
+            RunOnFile(fileInfo, algorithm, CreateFinalDirectoryPath(fileInfo.Directory));
+          }
+        }
+      }
+    }
+
+    private void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
+    {
+      string finalOutputDirPath = CreateFinalDirectoryPath(directoryInfo);
+
+      foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles()
+        .Where(s => HasherUtils.SupportedExtensions.Contains(s.Extension, StringComparer.OrdinalIgnoreCase)))
+      {
+        RunOnFile(fileInfo, algorithm, finalOutputDirPath);
+      }
+    }
+
+    private void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm, string finalOutputDirPath)
+    {
+      string hash = HasherUtils.GetHashFromFile(fileInfo, algorithm);
+
+      string destination = Path.Combine(finalOutputDirPath,
+        (_options.Lowercase ? hash.ToLower() : hash) + fileInfo.Extension);
+
+      ActionFile(fileInfo, destination);
+    }
+
+    private string CreateFinalDirectoryPath(DirectoryInfo dirInfo)
+    {
+      string finalOutputDirPath;
+
+      if (_options.PreserveSubDir)
+      {
+        //make path relevant to source dir
+
+        //split filepath on path separator
+        string[] dirSplit = dirInfo.FullName.Split(Path.DirectorySeparatorChar);
+
+        //find source parent dir name in filepath
+        int index = Array.IndexOf(dirSplit, _rootParentDir);
+
+        if (index < 0)
+        {
+          finalOutputDirPath = _outputDir;
+        }
+        else
+        {
+          //want to skip the current index,
+          //but leave room at start for the outputDir in order to make building the path easier
+          int len = 1 + dirSplit.Length - index;
+          string[] tmp = new string[len];
+          tmp[0] = _outputDir;
+          Array.Copy(dirSplit, index + 1, tmp, 1, len);
+
+          finalOutputDirPath = Path.Combine(tmp);
+
+          if (!Directory.Exists(finalOutputDirPath))
+          {
+            //todo handle exceptions from CreateDirectory
+            Directory.CreateDirectory(finalOutputDirPath);
+          }
         }
       }
       else
       {
-        destination = Path.Combine(file.Directory.FullName, hash + file.Extension);
+        finalOutputDirPath = HasherUtils.GetOutputDirectory(_options);
       }
 
+      return finalOutputDirPath;
+    }
+
+
+    private void ActionFile(FileInfo fileInfo, string destination)
+    {
       if (_options.Increment)
       {
         if (File.Exists(destination))
@@ -88,11 +132,11 @@ namespace ImageHasher
 
       if (_options.Copy)
       {
-        file.CopyTo(destination);
+        fileInfo.CopyTo(destination);
       }
       else
       {
-        file.MoveTo(destination);
+        fileInfo.MoveTo(destination);
       }
     }
 

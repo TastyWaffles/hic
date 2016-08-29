@@ -46,7 +46,7 @@ namespace ImageHasher
         using (Bitmap img = new Bitmap(file.FullName))
         {
           img.Save(ms, imageFormat);
-          return BitConverter.ToString(algorithm.ComputeHash(ms)).Replace("-", "");
+          return BitConverter.ToString(algorithm.ComputeHash(ms.ToArray())).Replace("-", "");
         }
       }
     }

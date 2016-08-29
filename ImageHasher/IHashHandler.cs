@@ -5,6 +5,6 @@ namespace ImageHasher
 {
   public interface IHashHandler : IDisposable
   {
-    void HandleFile(FileInfo file, string hash);
+    void RunHandler();
   }
 }
