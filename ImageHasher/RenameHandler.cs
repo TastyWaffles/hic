@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -8,18 +9,26 @@ namespace ImageHasher
   public class RenameHandler : IHashHandler
   {
     private readonly RenameFilesOptions _options;
-    private readonly string _rootParentDir;
-    private readonly string _outputDir;
+    private readonly DirectoryInfo _rootParentDir;
+    private readonly DirectoryInfo _outputDir;
+    private IEnumerable<string> _supportedExtensions;
 
     public RenameHandler(RenameFilesOptions options)
     {
       _options = options;
 
       string source = HasherUtils.IsDirectory(_options.Source) ? _options.Source : Directory.GetCurrentDirectory();
-      _rootParentDir = new DirectoryInfo(source).Name;
+      _rootParentDir = new DirectoryInfo(source);
 
-      _outputDir = HasherUtils.GetOutputDirectory(_options);
+      _outputDir = new DirectoryInfo(HasherUtils.GetOutputDirectory(_options));
+      if (!_outputDir.Exists)
+      {
+        _outputDir.Create();
+      }
+
+      _supportedExtensions = HasherUtils.SupportedExtensions; //.Intersect(_options.ExcludedFileExtensions); todo
     }
+
 
     public void Dispose()
     {
@@ -28,25 +37,34 @@ namespace ImageHasher
 
     public void RunHandler()
     {
-      using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
+      if (HasherUtils.IsDirectory(_options.Source))
       {
-        if (HasherUtils.IsDirectory(_options.Source))
+        DirectoryInfo info = new DirectoryInfo(_options.Source);
+
+        using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
         {
-          DirectoryInfo info = new DirectoryInfo(_options.Source);
           RunOnDirectory(info, algorithm);
 
           if (_options.Recursive)
           {
-            foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories())
+            foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories("*", SearchOption.AllDirectories))
             {
               RunOnDirectory(directoryInfo, algorithm);
             }
           }
         }
-        else
+
+        if (_options.DeleteEmptyDirs)
         {
-          FileInfo fileInfo = new FileInfo(_options.Source);
-          if (fileInfo.Exists)
+          HasherUtils.DeleteAllEmptyDirectories(info);
+        }
+      }
+      else
+      {
+        FileInfo fileInfo = new FileInfo(_options.Source);
+        if (fileInfo.Exists)
+        {
+          using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
           {
             RunOnFile(fileInfo, algorithm, CreateFinalDirectoryPath(fileInfo.Directory));
           }
@@ -54,18 +72,31 @@ namespace ImageHasher
       }
     }
 
-    private void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
+    private
+      void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
     {
       string finalOutputDirPath = CreateFinalDirectoryPath(directoryInfo);
 
-      foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles()
-        .Where(s => HasherUtils.SupportedExtensions.Contains(s.Extension, StringComparer.OrdinalIgnoreCase)))
+      foreach (
+        FileInfo fileInfo
+        in
+        directoryInfo.EnumerateFiles
+          ()
+          .
+          Where(s =>
+            _supportedExtensions.Contains
+            (
+              s.Extension
+              ,
+              StringComparer.OrdinalIgnoreCase
+            )))
       {
         RunOnFile(fileInfo, algorithm, finalOutputDirPath);
       }
     }
 
-    private void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm, string finalOutputDirPath)
+    private
+      void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm, string finalOutputDirPath)
     {
       string hash = HasherUtils.GetHashFromFile(fileInfo, algorithm);
 
@@ -75,11 +106,14 @@ namespace ImageHasher
       ActionFile(fileInfo, destination);
     }
 
-    private string CreateFinalDirectoryPath(DirectoryInfo dirInfo)
+    private
+      string CreateFinalDirectoryPath(DirectoryInfo dirInfo)
     {
       string finalOutputDirPath;
 
-      if (_options.PreserveSubDir)
+      if (
+        _options.PreserveSubDir
+      )
       {
         //make path relevant to source dir
 
@@ -87,19 +121,19 @@ namespace ImageHasher
         string[] dirSplit = dirInfo.FullName.Split(Path.DirectorySeparatorChar);
 
         //find source parent dir name in filepath
-        int index = Array.IndexOf(dirSplit, _rootParentDir);
+        int index = Array.IndexOf(dirSplit, _rootParentDir.Name);
 
-        if (index < 0)
+        if (index < 0 || index == dirSplit.Length - 1)
         {
-          finalOutputDirPath = _outputDir;
+          finalOutputDirPath = _outputDir.FullName;
         }
         else
         {
           //want to skip the current index,
           //but leave room at start for the outputDir in order to make building the path easier
-          int len = 1 + dirSplit.Length - index;
-          string[] tmp = new string[len];
-          tmp[0] = _outputDir;
+          int len = dirSplit.Length - index - 1;
+          string[] tmp = new string[len + 1];
+          tmp[0] = _outputDir.FullName;
           Array.Copy(dirSplit, index + 1, tmp, 1, len);
 
           finalOutputDirPath = Path.Combine(tmp);
@@ -113,20 +147,29 @@ namespace ImageHasher
       }
       else
       {
-        finalOutputDirPath = HasherUtils.GetOutputDirectory(_options);
+        finalOutputDirPath
+          =
+          HasherUtils.GetOutputDirectory
+          (
+            _options
+          );
       }
-
-      return finalOutputDirPath;
+      return
+        finalOutputDirPath;
     }
 
-
-    private void ActionFile(FileInfo fileInfo, string destination)
+    private
+      void ActionFile(FileInfo fileInfo, string destination)
     {
-      if (_options.Increment)
+      if (
+        _options.Increment)
       {
-        if (File.Exists(destination))
+        if (
+          File.Exists(destination))
         {
-          destination = IncrementFilePath(destination);
+          destination
+            =
+            IncrementFilePath(destination);
         }
       }
 
@@ -142,18 +185,18 @@ namespace ImageHasher
 
     private string IncrementFilePath(string destination)
     {
-      //todo omg this function has no error handling
+//todo omg this function has no error handling
 
       FileInfo fileInfo = new FileInfo(destination);
 
-      string[] splitName = fileInfo.Name.Split('_');
+      string[] splitName = fileInfo.Name.Split('_', '.');
 
       int val = 0;
-      if (splitName.Length > 1)
+      if (splitName.Length > 2)
       {
         val = int.Parse(splitName[1]) + 1;
       }
-      return Path.Combine(fileInfo.Directory.FullName, splitName[0] + '_' + val);
+      return Path.Combine(fileInfo.Directory.FullName, splitName[0] + '_' + val + fileInfo.Extension);
     }
   }
 }

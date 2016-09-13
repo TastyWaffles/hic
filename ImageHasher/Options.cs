@@ -17,7 +17,7 @@ namespace ImageHasher
       set { _algorithm = "SHA1".Equals(value) || "MD5".Equals(value) ? value : "SHA1"; }
     }
 
-    [Option('o', "output", HelpText = "Output directory")] //todo value 1
+    [Option('o', "output", HelpText = "Output directory")]
     public string OutputDir { get; set; }
 
     [Option('q', "quiet", HelpText = "Execute with no output at all")]
@@ -26,7 +26,7 @@ namespace ImageHasher
     [Option('r', "recursive", HelpText = "Recursively look for files")]
     public bool Recursive { get; set; }
 
-    [Option('s', "source", HelpText = "Source/Input directory/file")] //todo value 0
+    [Option('s', "source", HelpText = "Source/Input directory/file")]
     public string Source { get; set; }
 
     [Option('l', "lowercase", HelpText = "Output hashes in lowercase")]
@@ -56,6 +56,9 @@ namespace ImageHasher
     [Option('p', "preserve",
        HelpText = "Preserve-sub directory structure when running recursively with output directory")]
     public bool PreserveSubDir { get; set; }
+
+    [Option('d', "deleteEmpty", HelpText = "Delete any empty directories in source directory (if recursing)")]
+    public bool DeleteEmptyDirs { get; set; }
   }
 
 

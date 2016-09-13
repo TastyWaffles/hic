@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace ImageHasher
@@ -67,6 +68,19 @@ namespace ImageHasher
         return options.Source;
       }
       return Directory.GetCurrentDirectory();
+    }
+
+    public static void DeleteAllEmptyDirectories(DirectoryInfo info)
+    {
+      foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
+      {
+        DeleteAllEmptyDirectories(directoryInfo);
+      }
+
+      if (!info.EnumerateFileSystemInfos().Any())
+      {
+        info.Delete();
+      }
     }
   }
 }
