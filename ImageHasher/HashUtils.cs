@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 
 namespace ImageHasher
 {
-  public static class HasherUtils
+  public static class HashUtils
   {
     internal static readonly string[] SupportedExtensions = {".jpg", ".jpeg", ".png", ".bmp", ".exif", ".gif", ".tif"};
 

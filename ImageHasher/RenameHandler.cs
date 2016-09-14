@@ -11,22 +11,22 @@ namespace ImageHasher
     private readonly RenameFilesOptions _options;
     private readonly DirectoryInfo _rootParentDir;
     private readonly DirectoryInfo _outputDir;
-    private IEnumerable<string> _supportedExtensions;
+    private readonly IEnumerable<string> _supportedExtensions;
 
     public RenameHandler(RenameFilesOptions options)
     {
       _options = options;
 
-      string source = HasherUtils.IsDirectory(_options.Source) ? _options.Source : Directory.GetCurrentDirectory();
+      string source = HashUtils.IsDirectory(_options.Source) ? _options.Source : Directory.GetCurrentDirectory();
       _rootParentDir = new DirectoryInfo(source);
 
-      _outputDir = new DirectoryInfo(HasherUtils.GetOutputDirectory(_options));
+      _outputDir = new DirectoryInfo(HashUtils.GetOutputDirectory(_options));
       if (!_outputDir.Exists)
       {
         _outputDir.Create();
       }
 
-      _supportedExtensions = HasherUtils.SupportedExtensions; //.Intersect(_options.ExcludedFileExtensions); todo
+      _supportedExtensions = HashUtils.SupportedExtensions; //.Intersect(_options.ExcludedFileExtensions); todo
     }
 
 
@@ -37,7 +37,7 @@ namespace ImageHasher
 
     public void RunHandler()
     {
-      if (HasherUtils.IsDirectory(_options.Source))
+      if (HashUtils.IsDirectory(_options.Source))
       {
         DirectoryInfo info = new DirectoryInfo(_options.Source);
 
@@ -56,7 +56,7 @@ namespace ImageHasher
 
         if (_options.DeleteEmptyDirs)
         {
-          HasherUtils.DeleteAllEmptyDirectories(info);
+          HashUtils.DeleteAllEmptyDirectories(info);
         }
       }
       else
@@ -98,7 +98,7 @@ namespace ImageHasher
     private
       void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm, string finalOutputDirPath)
     {
-      string hash = HasherUtils.GetHashFromFile(fileInfo, algorithm);
+      string hash = HashUtils.GetHashFromFile(fileInfo, algorithm);
 
       string destination = Path.Combine(finalOutputDirPath,
         (_options.Lowercase ? hash.ToLower() : hash) + fileInfo.Extension);
@@ -147,39 +147,50 @@ namespace ImageHasher
       }
       else
       {
-        finalOutputDirPath
-          =
-          HasherUtils.GetOutputDirectory
-          (
-            _options
-          );
+        finalOutputDirPath = HashUtils.GetOutputDirectory(_options);
       }
-      return
-        finalOutputDirPath;
+      return finalOutputDirPath;
     }
 
-    private
-      void ActionFile(FileInfo fileInfo, string destination)
+    private void ActionFile(FileInfo fileInfo, string destination)
     {
-      if (
-        _options.Increment)
+      if (!fileInfo.FullName.Equals(destination))
       {
-        if (
-          File.Exists(destination))
+        if (_options.Increment)
         {
-          destination
-            =
-            IncrementFilePath(destination);
+          if (File.Exists(destination))
+          {
+            destination = IncrementFilePath(destination);
+          }
         }
-      }
+        else
+        {
+          if (File.Exists(destination))
+          {
+            File.Delete(destination);
+          }
+        }
 
-      if (_options.Copy)
-      {
-        fileInfo.CopyTo(destination);
-      }
-      else
-      {
-        fileInfo.MoveTo(destination);
+        if (_options.Copy)
+        {
+          try
+          {
+            fileInfo.CopyTo(destination);
+          }
+          catch (IOException)
+          {
+          }
+        }
+        else
+        {
+          try
+          {
+            fileInfo.MoveTo(destination);
+          }
+          catch (IOException)
+          {
+          }
+        }
       }
     }
 

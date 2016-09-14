@@ -14,7 +14,7 @@ namespace ImageHasher
     public FileOutputHandler(FileOutputOptions options)
     {
       _options = options;
-      string output = HasherUtils.GetOutputDirectory(options);
+      string output = HashUtils.GetOutputDirectory(options);
       Directory.CreateDirectory(output);
       output = Path.Combine(output, options.FileName);
 
@@ -37,7 +37,7 @@ namespace ImageHasher
     {
       using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
       {
-        if (HasherUtils.IsDirectory(_options.Source))
+        if (HashUtils.IsDirectory(_options.Source))
         {
           DirectoryInfo info = new DirectoryInfo(_options.Source);
           //Run on the base directory
@@ -67,7 +67,7 @@ namespace ImageHasher
     private void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
     {
       foreach (FileInfo fileInfo in directoryInfo.EnumerateFiles()
-        .Where(s => HasherUtils.SupportedExtensions.Contains(s.Extension, StringComparer.OrdinalIgnoreCase)))
+        .Where(s => HashUtils.SupportedExtensions.Contains(s.Extension, StringComparer.OrdinalIgnoreCase)))
       {
         RunOnFile(fileInfo, algorithm);
       }
@@ -75,7 +75,7 @@ namespace ImageHasher
 
     private void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm)
     {
-      string hash = HasherUtils.GetHashFromFile(fileInfo, algorithm);
+      string hash = HashUtils.GetHashFromFile(fileInfo, algorithm);
       _streamWriter.WriteLine(fileInfo.FullName + _options.Separator + (_options.Lowercase ? hash.ToLower() : hash));
     }
   }
