@@ -54,10 +54,10 @@ namespace ImageHasher
           }
         }
 
-        if (_options.DeleteEmptyDirs)
-        {
-          HashUtils.DeleteAllEmptyDirectories(info);
-        }
+//        if (_options.DeleteEmptyDirs)
+//        {
+//          HashUtils.DeleteAllEmptyDirectories(info);
+//        }
       }
       else
       {
@@ -92,6 +92,11 @@ namespace ImageHasher
             )))
       {
         RunOnFile(fileInfo, algorithm, finalOutputDirPath);
+      }
+
+      if (_options.DeleteEmptyDirs && !directoryInfo.EnumerateFileSystemInfos().Any())
+      {
+        directoryInfo.Delete();
       }
     }
 

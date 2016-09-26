@@ -69,18 +69,5 @@ namespace ImageHasher
       }
       return Directory.GetCurrentDirectory();
     }
-
-    public static void DeleteAllEmptyDirectories(DirectoryInfo info)
-    {
-      foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories("*", SearchOption.TopDirectoryOnly))
-      {
-        DeleteAllEmptyDirectories(directoryInfo);
-      }
-
-      if (!info.EnumerateFileSystemInfos().Any())
-      {
-        info.Delete();
-      }
-    }
   }
 }
