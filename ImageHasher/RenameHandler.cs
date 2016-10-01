@@ -8,11 +8,27 @@ namespace ImageHasher
 {
   public class RenameHandler : IHashHandler
   {
+    /// <summary>
+    /// The options given to the handler
+    /// </summary>
     private readonly RenameFilesOptions _options;
+    /// <summary>
+    /// The root directory of the input files
+    /// </summary>
     private readonly DirectoryInfo _rootParentDir;
+    /// <summary>
+    /// The root directory for the processed files
+    /// </summary>
     private readonly DirectoryInfo _outputDir;
+    /// <summary>
+    /// The extensions supported by the handler
+    /// </summary>
     private readonly IEnumerable<string> _supportedExtensions;
 
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    /// <param name="options">Parsed command line arguments</param>
     public RenameHandler(RenameFilesOptions options)
     {
       _options = options;
@@ -29,12 +45,14 @@ namespace ImageHasher
       _supportedExtensions = HashUtils.SupportedExtensions; //.Intersect(_options.ExcludedFileExtensions); todo
     }
 
-
     public void Dispose()
     {
       //no-op
     }
 
+    /// <summary>
+    /// Run the Rename Handler
+    /// </summary>
     public void RunHandler()
     {
       if (HashUtils.IsDirectory(_options.Source))
@@ -66,6 +84,11 @@ namespace ImageHasher
       }
     }
 
+    /// <summary>
+    /// Iterate over each directory (as required) and action each file.
+    /// </summary>
+    /// <param name="directoryInfo">Directory to action</param>
+    /// <param name="algorithm">Algorithm to use</param>
     private void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
     {
       Logger.Info("Processing dir: " + directoryInfo.FullName);
@@ -86,6 +109,12 @@ namespace ImageHasher
       }
     }
 
+    /// <summary>
+    /// Run the hash algorithm on the file and apply all required actions to said file.
+    /// </summary>
+    /// <param name="fileInfo">File to action</param>
+    /// <param name="algorithm">Algorithm to use</param>
+    /// <param name="finalOutputDirPath">The final output directory for the file</param>
     private void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm, string finalOutputDirPath)
     {
       string hash = HashUtils.GetHashFromFile(fileInfo, algorithm);
@@ -96,6 +125,13 @@ namespace ImageHasher
       ActionFile(fileInfo, destination);
     }
 
+    /// <summary>
+    /// Returns the output directory based on the given input directory.
+    /// Handles whether to preserve sub-directory structure.
+    /// Creates the output directory if it doesn't exist.
+    /// </summary>
+    /// <param name="dirInfo">The input directory</param>
+    /// <returns>The output directory</returns>
     private string CreateFinalDirectoryPath(DirectoryInfo dirInfo)
     {
       string finalOutputDirPath;
@@ -129,6 +165,7 @@ namespace ImageHasher
           {
             //todo handle exceptions from CreateDirectory
             Directory.CreateDirectory(finalOutputDirPath);
+            Logger.Info("Created directory: " + finalOutputDirPath);
           }
         }
       }
@@ -139,47 +176,51 @@ namespace ImageHasher
       return finalOutputDirPath;
     }
 
+    /// <summary>
+    /// Actions a file based on the program args, handles clashes by copying/moving and incrementing/overwriting.
+    /// </summary>
+    /// <param name="fileInfo">The file to be actioned</param>
+    /// <param name="destination">The destination file path</param>
     private void ActionFile(FileInfo fileInfo, string destination)
     {
+      //Already there
       if (fileInfo.FullName.Equals(destination)) return;
 
-      if (_options.Increment)
+      if (File.Exists(destination))
       {
-        if (File.Exists(destination))
+        if (_options.Increment)
         {
           destination = IncrementFilePath(destination);
         }
-      }
-      else
-      {
-        if (File.Exists(destination))
+        else
         {
           File.Delete(destination);
         }
       }
 
-      if (_options.Copy)
+      try
       {
-        try
+        if (_options.Copy)
         {
           fileInfo.CopyTo(destination);
         }
-        catch (IOException)
-        {
-        }
-      }
-      else
-      {
-        try
+        else
         {
           fileInfo.MoveTo(destination);
         }
-        catch (IOException)
-        {
-        }
+      }
+      catch (IOException e)
+      {
+        Logger.Info(e.Message);
       }
     }
 
+    /// <summary>
+    /// Increments a suffix on the end of a file.
+    /// The suffix is the counter in the format: filename_counter.extension
+    /// </summary>
+    /// <param name="destination">The intended file path</param>
+    /// <returns>The resultant file path</returns>
     private string IncrementFilePath(string destination)
     {
       //todo omg this function has no error handling
