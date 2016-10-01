@@ -20,8 +20,8 @@ namespace ImageHasher
     [Option('o', "output", HelpText = "Output directory")]
     public string OutputDir { get; set; }
 
-    [Option('q', "quiet", HelpText = "Execute with no output at all")]
-    public bool Quiet { get; set; }
+    [Option('v', "verbose", HelpText = "Execute with verbose output")]
+    public bool Verbose { get; set; }
 
     [Option('r', "recursive", HelpText = "Recursively look for files")]
     public bool Recursive { get; set; }

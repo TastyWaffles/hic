@@ -18,10 +18,9 @@ namespace ImageHasher
       Directory.CreateDirectory(output);
       output = Path.Combine(output, options.FileName);
 
-      if (!options.Quiet)
-      {
-        Logger.Info("Output file path: " + output);
-      }
+
+      Logger.Info("Output file path: " + output);
+
 
       _fileStream = File.Create(output);
       _streamWriter = new StreamWriter(_fileStream);

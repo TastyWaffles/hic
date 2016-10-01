@@ -45,51 +45,37 @@ namespace ImageHasher
         {
           RunOnDirectory(info, algorithm);
 
-          if (_options.Recursive)
+          if (!_options.Recursive) return;
+
+          foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories("*", SearchOption.AllDirectories))
           {
-            foreach (DirectoryInfo directoryInfo in info.EnumerateDirectories("*", SearchOption.AllDirectories))
-            {
-              RunOnDirectory(directoryInfo, algorithm);
-            }
+            RunOnDirectory(directoryInfo, algorithm);
           }
         }
-
-//        if (_options.DeleteEmptyDirs)
-//        {
-//          HashUtils.DeleteAllEmptyDirectories(info);
-//        }
       }
       else
       {
         FileInfo fileInfo = new FileInfo(_options.Source);
-        if (fileInfo.Exists)
+
+        if (!fileInfo.Exists) return;
+
+        using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
         {
-          using (HashAlgorithm algorithm = HashAlgorithm.Create(_options.Algorithm))
-          {
-            RunOnFile(fileInfo, algorithm, CreateFinalDirectoryPath(fileInfo.Directory));
-          }
+          RunOnFile(fileInfo, algorithm, CreateFinalDirectoryPath(fileInfo.Directory));
         }
       }
     }
 
-    private
-      void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
+    private void RunOnDirectory(DirectoryInfo directoryInfo, HashAlgorithm algorithm)
     {
+      Logger.Info("Processing dir: " + directoryInfo.FullName);
+
       string finalOutputDirPath = CreateFinalDirectoryPath(directoryInfo);
 
       foreach (
-        FileInfo fileInfo
-        in
-        directoryInfo.EnumerateFiles
-          ()
-          .
-          Where(s =>
-            _supportedExtensions.Contains
-            (
-              s.Extension
-              ,
-              StringComparer.OrdinalIgnoreCase
-            )))
+        FileInfo fileInfo in
+        directoryInfo.EnumerateFiles()
+          .Where(s => _supportedExtensions.Contains(s.Extension, StringComparer.OrdinalIgnoreCase)))
       {
         RunOnFile(fileInfo, algorithm, finalOutputDirPath);
       }
@@ -100,8 +86,7 @@ namespace ImageHasher
       }
     }
 
-    private
-      void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm, string finalOutputDirPath)
+    private void RunOnFile(FileInfo fileInfo, HashAlgorithm algorithm, string finalOutputDirPath)
     {
       string hash = HashUtils.GetHashFromFile(fileInfo, algorithm);
 
@@ -111,14 +96,11 @@ namespace ImageHasher
       ActionFile(fileInfo, destination);
     }
 
-    private
-      string CreateFinalDirectoryPath(DirectoryInfo dirInfo)
+    private string CreateFinalDirectoryPath(DirectoryInfo dirInfo)
     {
       string finalOutputDirPath;
 
-      if (
-        _options.PreserveSubDir
-      )
+      if (_options.PreserveSubDir)
       {
         //make path relevant to source dir
 
@@ -159,49 +141,48 @@ namespace ImageHasher
 
     private void ActionFile(FileInfo fileInfo, string destination)
     {
-      if (!fileInfo.FullName.Equals(destination))
-      {
-        if (_options.Increment)
-        {
-          if (File.Exists(destination))
-          {
-            destination = IncrementFilePath(destination);
-          }
-        }
-        else
-        {
-          if (File.Exists(destination))
-          {
-            File.Delete(destination);
-          }
-        }
+      if (fileInfo.FullName.Equals(destination)) return;
 
-        if (_options.Copy)
+      if (_options.Increment)
+      {
+        if (File.Exists(destination))
         {
-          try
-          {
-            fileInfo.CopyTo(destination);
-          }
-          catch (IOException)
-          {
-          }
+          destination = IncrementFilePath(destination);
         }
-        else
+      }
+      else
+      {
+        if (File.Exists(destination))
         {
-          try
-          {
-            fileInfo.MoveTo(destination);
-          }
-          catch (IOException)
-          {
-          }
+          File.Delete(destination);
+        }
+      }
+
+      if (_options.Copy)
+      {
+        try
+        {
+          fileInfo.CopyTo(destination);
+        }
+        catch (IOException)
+        {
+        }
+      }
+      else
+      {
+        try
+        {
+          fileInfo.MoveTo(destination);
+        }
+        catch (IOException)
+        {
         }
       }
     }
 
     private string IncrementFilePath(string destination)
     {
-//todo omg this function has no error handling
+      //todo omg this function has no error handling
 
       FileInfo fileInfo = new FileInfo(destination);
 
